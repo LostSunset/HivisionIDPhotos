@@ -1,5 +1,20 @@
 *.pyc
-__pycache__/
+**/__pycache__/
 .idea
+.vscode/*
 .DS_Store
-hivision_modnet.onnx
+.env
+demo/kb_output/*.jpg
+demo/kb_output/*.png
+# build outputs
+dist
+build
+# checkpoint
+*.pth
+*.pt
+*.onnx
+*.mnn
+test/temp/*
+!test/temp/.gitkeep
+
+.python-version
