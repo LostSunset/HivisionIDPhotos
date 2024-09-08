@@ -35,11 +35,11 @@ English / [中文](README.md) / [日本語](README_JP.md) / [한국어](README_K
 - [Project Updates](#-project-updates)
 - [Overview](#overview)
 - [Preparation](#-preparation)
+- [Community]()
 - [Running Demo](#-running-gradio-demo)
 - [Python Inference](#-python-inference)
 - [API Service Deployment](#️-deploying-api-service)
 - [Docker Deployment](#-docker-deployment)
-- [Links](#-links)
 - [Contact Us](#-contact-us)
 - [Contributors](#contributors)
 
@@ -49,7 +49,7 @@ English / [中文](README.md) / [日本語](README_JP.md) / [한국어](README_K
 
 - Online Experience: [![SwanHub Demo](https://img.shields.io/static/v1?label=Demo&message=SwanHub%20Demo&color=blue)](https://swanhub.co/ZeYiLin/HivisionIDPhotos/demo)、[![Spaces](https://img.shields.io/badge/🤗-Open%20in%20Spaces-blue)](https://huggingface.co/spaces/TheEeeeLin/HivisionIDPhotos)
 
-- 2024.09.08: Added a new background removal model [RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4)
+- 2024.09.08: Added a new background removal model [RMBG-1.4](https://huggingface.co/briaai/RMBG-1.4) | ComfyUI Workflow - [HivisionIDPhotos-ComfyUI](https://github.com/AIFSH/HivisionIDPhotos-ComfyUI) contributed by [AIFSH](https://github.com/AIFSH/HivisionIDPhotos-ComfyUI)
 - 2024.09.07: Added **Face Detection API Option** [Face++](docs/face++_EN.md) for higher accuracy face detection
 - 2024.09.06: Added new matting model [modnet_photographic_portrait_matting.onnx](https://github.com/ZHKKKe/MODNet)
 - 2024.09.05: Updated [Restful API Documentation](docs/api_EN.md)
@@ -83,6 +83,17 @@ If HivisionIDPhoto is helpful to you, please star this repo or recommend it to y
 
 <br>
 
+# 🏠 Community
+
+We share some interesting applications and extensions of HivisionIDPhotos built by the community:
+
+- [HivisionIDPhotos-windows-GUI](https://github.com/zhaoyun0071/HivisionIDPhotos-windows-GUI): A Windows client application built by [zhaoyun0071](https://github.com/zhaoyun0071)
+- [HivisionIDPhotos-ComfyUI](https://github.com/AIFSH/HivisionIDPhotos-ComfyUI): ComfyUI workflow for ID photo processing, built by [AIFSH](https://github.com/AIFSH/HivisionIDPhotos-ComfyUI)
+
+[![](assets/comfyui.png)](https://github.com/AIFSH/HivisionIDPhotos-ComfyUI)
+
+<br>
+
 # 🔧 Preparation
 
 Environment installation and dependencies:
@@ -110,7 +121,7 @@ pip install -r requirements-app.txt
 **Option 1: Script Download**
 
 ```bash
-python scripts/download_model.py
+python scripts/download_model.py --models all
 ```
 
 **Option 2: Direct Download**
@@ -119,7 +130,7 @@ Save in the project's `hivision/creator/weights` directory:
 - `modnet_photographic_portrait_matting.onnx` (24.7MB): Official weights from [MODNet](https://github.com/ZHKKKe/MODNet), [Download](https://github.com/Zeyi-Lin/HivisionIDPhotos/releases/download/pretrained-model/modnet_photographic_portrait_matting.onnx)
 - `hivision_modnet.onnx` (24.7MB): A matting model better suited for solid background swapping, [Download](https://github.com/Zeyi-Lin/HivisionIDPhotos/releases/download/pretrained-model/hivision_modnet.onnx)
 - `mnn_hivision_modnet.mnn` (24.7MB): MNN converted matting model by [zjkhahah](https://github.com/zjkhahah), [Download](https://github.com/Zeyi-Lin/HivisionIDPhotos/releases/download/pretrained-model/mnn_hivision_modnet.mnn)
-- `rmbg-1.4.onnx` (176.2MB): Open source matting model from [BRIA AI](https://huggingface.co/briaai/RMBG-1.4), [download](https://huggingface.co/briaai/RMBG-1.4/resolve/main/model.pth?download=true) it and rename it to `rmbg-1.4.onnx`.
+- `rmbg-1.4.onnx` (176.2MB): Open source matting model from [BRIA AI](https://huggingface.co/briaai/RMBG-1.4), [download](https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx?download=true) it and rename it to `rmbg-1.4.onnx`.
 
 ## 4. Face Detection Model Configuration
 
@@ -323,12 +334,6 @@ docker run  -d -p 7860:7860 \
     -e FACE_PLUS_API_SECRET=VTee824E···· \
     linzeyi/hivision_idphotos 
 ```
-
-<br>
-
-# 🌲 Links
-
-- [HivisionIDPhotos-windows-GUI](https://github.com/zhaoyun0071/HivisionIDPhotos-windows-GUI)
 
 <br>
 
