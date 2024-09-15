@@ -1,20 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-r"""
-@DATE: 2024/9/5 21:52
-@File: utils.py
-@IDE: pycharm
-@Description:
-    hivision提供的工具函数
-"""
 from PIL import Image
 import io
 import numpy as np
 import cv2
 import base64
+from hivision.plugin.watermark import Watermarker, WatermarkerStyles
 
 
-def resize_image_to_kb(input_image, output_image_path, target_size_kb):
+def save_image_dpi_to_bytes(image, output_image_path, dpi=300):
+    """
+    设置图像的DPI（每英寸点数）并返回字节流
+
+    :param image: numpy.ndarray, 输入的图像数组
+    :param output_image_path: Path to save the resized image. 保存调整大小后的图像的路径。
+    :param dpi: int, 要设置的DPI值，默认为300
+    """
+    image = Image.fromarray(image)
+    # 创建一个字节流对象
+    byte_stream = io.BytesIO()
+    # 将图像保存到字节流
+    image.save(byte_stream, format="PNG", dpi=(dpi, dpi))
+    # 获取字节流的内容
+    image_bytes = byte_stream.getvalue()
+
+    # Save the image to the output path
+    with open(output_image_path, "wb") as f:
+        f.write(image_bytes)
+
+    return image_bytes
+
+
+def resize_image_to_kb(input_image, output_image_path, target_size_kb, dpi=300):
     """
     Resize an image to a target size in KB.
     将图像调整大小至目标文件大小（KB）。
@@ -46,7 +63,7 @@ def resize_image_to_kb(input_image, output_image_path, target_size_kb):
         img_byte_arr = io.BytesIO()
 
         # Save the image to the BytesIO object with the current quality
-        img.save(img_byte_arr, format="JPEG", quality=quality)
+        img.save(img_byte_arr, format="JPEG", quality=quality, dpi=(dpi, dpi))
 
         # Get the size of the image in KB
         img_size_kb = len(img_byte_arr.getvalue()) / 1024
@@ -72,12 +89,6 @@ def resize_image_to_kb(input_image, output_image_path, target_size_kb):
         # Ensure quality does not go below 1
         if quality < 1:
             quality = 1
-
-
-import numpy as np
-from PIL import Image
-import io
-import base64
 
 
 def resize_image_to_kb_base64(input_image, target_size_kb, mode="exact"):
@@ -150,14 +161,21 @@ def resize_image_to_kb_base64(input_image, target_size_kb, mode="exact"):
 
     # Encode the image data to base64
     img_base64 = base64.b64encode(img_byte_arr.getvalue()).decode("utf-8")
-    return img_base64
+    return "data:image/png;base64," + img_base64
 
 
-def numpy_2_base64(img: np.ndarray):
+def numpy_2_base64(img: np.ndarray) -> str:
     _, buffer = cv2.imencode(".png", img)
     base64_image = base64.b64encode(buffer).decode("utf-8")
 
-    return base64_image
+    return "data:image/png;base64," + base64_image
+
+
+def base64_2_numpy(base64_image: str) -> np.ndarray:
+    img = base64.b64decode(base64_image)
+    img = np.frombuffer(img, np.uint8)
+
+    return img
 
 
 def save_numpy_image(numpy_img, file_path):
@@ -256,7 +274,13 @@ def add_background(input_image, bgr=(0, 0, 0), mode="pure_color"):
     :return: output: 合成好的输出图像
     """
     height, width = input_image.shape[0], input_image.shape[1]
-    b, g, r, a = cv2.split(input_image)
+    try:
+        b, g, r, a = cv2.split(input_image)
+    except ValueError:
+        raise ValueError(
+            "The input image must have 4 channels. 输入图像必须有4个通道，即透明图像。"
+        )
+
     a_cal = a / 255
     if mode == "pure_color":
         # 纯色填充
@@ -273,3 +297,20 @@ def add_background(input_image, bgr=(0, 0, 0), mode="pure_color"):
     )
 
     return output
+
+
+def add_watermark(
+    image, text, size=50, opacity=0.5, angle=45, color="#8B8B1B", space=75
+):
+    image = Image.fromarray(image)
+    watermarker = Watermarker(
+        input_image=image,
+        text=text,
+        style=WatermarkerStyles.STRIPED,
+        angle=angle,
+        color=color,
+        opacity=opacity,
+        size=size,
+        space=space,
+    )
+    return np.array(watermarker.image.convert("RGB"))

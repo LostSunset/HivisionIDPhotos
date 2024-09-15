@@ -1,6 +1,7 @@
 # API Docs
 
-中文 | [English](api_EN.md)
+[English](api_EN.md) / 中文 / [日本語](api_JP.md) / [한국어](api_KO.md)
+
 
 ## 目录
 
@@ -8,8 +9,6 @@
 - [接口功能说明](#接口功能说明)
 - [cURL 请求示例](#curl-请求示例)
 - [Python 请求示例](#python-请求示例)
-  - [Python Requests 请求方法](#1️⃣-python-requests-请求方法)
-  - [Python 脚本请求方法](#2️⃣-python-脚本请求方法)
 - [Java 请求示例](#java-请求示例)
 - [Javascript 请求示例](#javascript-请求示例)
 
@@ -18,7 +17,7 @@
 在请求 API 之前，请先运行后端服务
 
 ```bash
-python delopy_api.py
+python deploy_api.py
 ```
 
 <br>
@@ -43,19 +42,38 @@ python delopy_api.py
 
 接口名：`add_background`
 
-`添加背景色`接口的逻辑是发送一张 RGBA 图像，根据`color`添加背景色，合成一张 JPG 图像。
+`添加背景色`接口的逻辑是接收一张 RGBA 图像（透明图），根据`color`添加背景色，合成一张 JPG 图像。
 
 ### 3.生成六寸排版照
 
 接口名：`generate_layout_photos`
 
-`生成六寸排版照`接口的逻辑是发送一张 RGB 图像（一般为添加背景色之后的证件照），根据`size`进行照片排布，然后生成一张六寸排版照。
+`生成六寸排版照`接口的逻辑是接收一张 RGB 图像（一般为添加背景色之后的证件照），根据`size`进行照片排布，然后生成一张六寸排版照。
 
 ### 4.人像抠图
 
 接口名：`human_matting`
 
-`人像抠图`接口的逻辑是发送一张 RGB 图像，输出一张标准抠图人像照和高清抠图人像照（无任何背景填充）。
+`人像抠图`接口的逻辑是接收一张 RGB 图像，输出一张标准抠图人像照和高清抠图人像照（无任何背景填充）。
+
+### 5.图像加水印
+
+接口名：`watermark`
+
+`图像加水印`接口的功能是接收一个水印文本，然后在原图上添加指定的水印。用户可以指定水印的位置、透明度和大小等属性，以便将水印无缝地融合到原图中。
+
+
+### 6.设置图像KB大小
+
+接口名：`set_kb`
+
+`设置图像KB大小`接口的功能是接收一张图像和目标文件大小（以KB为单位），如果设置的KB值小于原文件，则调整压缩率；如果设置的KB值大于源文件，则通过给文件头添加信息的方式调大KB值，目标是让图像的最终大小与设置的KB值一致。
+
+### 7.证件照裁切
+
+接口名：`idphoto_crop`
+
+`证件照裁切`接口的功能是接收一张 RBGA 图像（透明图），输出一张标准证件照和一张高清证件照。
 
 <br>
 
@@ -67,11 +85,12 @@ cURL 是一个命令行工具，用于使用各种网络协议传输数据。以
 
 ```bash
 curl -X POST "http://127.0.0.1:8080/idphoto" \
--F "input_image=@demo/images/test.jpg" \
+-F "input_image=@demo/images/test0.jpg" \
 -F "height=413" \
 -F "width=295" \
 -F "human_matting_model=hivision_modnet" \
--F "face_detect_model=mtcnn"
+-F "face_detect_model=mtcnn" \
+-F "hd=true"
 ```
 
 ### 2. 添加背景色
@@ -98,15 +117,46 @@ curl -X POST "http://127.0.0.1:8080/generate_layout_photos" \
 
 ```bash
 curl -X POST "http://127.0.0.1:8080/human_matting" \
--F "input_image=@demo/images/test.jpg" \
+-F "input_image=@demo/images/test0.jpg" \
 -F "human_matting_model=hivision_modnet"
+```
+
+### 5. 图片加水印
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8080/watermark?size=20&opacity=0.5&angle=30&color=%23000000&space=25' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'input_image=@demo/images/test0.jpg;type=image/jpeg' \
+  -F 'text=Hello'
+```
+
+### 6. 设置图像KB大小
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8080/set_kb' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'input_image=@demo/images/test0.jpg;type=image/jpeg' \
+  -F 'kb=50'
+```
+
+### 7. 证件照裁切
+```bash
+curl -X 'POST' \
+  'http://127.0.0.1:8080/idphoto_crop?head_measure_ratio=0.2&head_height_ratio=0.45&top_distance_max=0.12&top_distance_min=0.1' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'input_image=@idphoto_matting.png;type=image/png' \
+  -F 'height=413' \
+  -F 'width=295' \
+  -F 'face_detect_model=mtcnn' \
+  -F 'hd=true'
 ```
 
 <br>
 
 ## Python 请求示例
-
-### 1️⃣ Python Requests 请求方法
 
 #### 1.生成证件照(底透明)
 
@@ -114,10 +164,10 @@ curl -X POST "http://127.0.0.1:8080/human_matting" \
 import requests
 
 url = "http://127.0.0.1:8080/idphoto"
-input_image_path = "images/test.jpg"
+input_image_path = "demo/images/test0.jpg"
 
 files = {"input_image": open(input_image_path, "rb")}
-data = {"height": 413, "width": 295, "human_matting_model": "hivision_modnet", "face_detect_model": "mtcnn"}
+data = {"height": 413, "width": 295, "human_matting_model": "hivision_modnet", "face_detect_model": "mtcnn", "hd": True}
 
 response = requests.post(url, files=files, data=data).json()
 
@@ -177,123 +227,94 @@ response = requests.post(url, files=files, data=data).json()
 print(response)
 ```
 
-### 2️⃣ Python 脚本请求方法
+#### 5.图片加水印
 
-```bash
-python requests_api.py -u <URL> -t <TYPE> -i <INPUT_IMAGE_DIR> -o <OUTPUT_IMAGE_DIR> [--height <HEIGHT>] [--width <WIDTH>] [-c <COLOR>] [-k <KB>]
+```python
+import requests
+
+# 设置请求的 URL 和参数
+url = "http://127.0.0.1:8080/watermark"
+params = {"size": 20, "opacity": 0.5, "angle": 30, "color": "#000000", "space": 25}
+
+# 设置文件和其他表单数据
+input_image_path = "demo/images/test0.jpg"
+files = {"input_image": open(input_image_path, "rb")}
+data = {"text": "Hello"}
+
+# 发送 POST 请求
+response = requests.post(url, params=params, files=files, data=data)
+
+# 检查响应
+if response.ok:
+    # 输出响应内容
+    print(response.json())
+else:
+    # 输出错误信息
+    print(f"Request failed with status code {response.status_code}: {response.text}")
 ```
 
-#### 参数说明
+### 6. 设置图像KB大小
 
-##### 基本参数
+```python
+import requests
 
-- `-u`, `--url`
+# 设置请求的 URL
+url = "http://127.0.0.1:8080/set_kb"
 
-  - **描述**: API 服务的 URL。
-  - **默认值**: `http://127.0.0.1:8080`
+# 设置文件和其他表单数据
+input_image_path = "demo/images/test0.jpg"
+files = {"input_image": open(input_image_path, "rb")}
+data = {"kb": 50}
 
-- `-t`, `--type`
+# 发送 POST 请求
+response = requests.post(url, files=files, data=data)
 
-  - **描述**: 请求 API 的种类。
-  - **默认值**: `idphoto`
-
-- `-i`, `--input_image_dir`
-
-  - **描述**: 输入图像路径。
-  - **必需**: 是
-  - **示例**: `./input_images/photo.jpg`
-
-- `-o`, `--output_image_dir`
-  - **描述**: 保存图像路径。
-  - **必需**: 是
-  - **示例**: `./output_images/processed_photo.jpg`
-
-##### 可选参数
-
-- `--face_detect_model`
-  - **描述**: 人脸检测模型
-  - **默认值**: mtcnn
-
-- `--human_matting_model`
-  - **描述**: 人像抠图模型
-  - **默认值**: hivision_modnet
-
-- `--height`,
-  - **描述**: 标准证件照的输出尺寸的高度。
-  - **默认值**: 413
-
-- `--width`,
-  - **描述**: 标准证件照的输出尺寸的宽度。
-  - **默认值**: 295
-
-- `-c`, `--color`
-  - **描述**: 给透明图增加背景色，格式为 Hex（如#638cce），仅在 type 为`add_background`时生效
-  - **默认值**: `638cce`
-
-- `-k`, `--kb`
-  - **描述**: 输出照片的 KB 值，仅在 type 为`add_background`和`generate_layout_photos`时生效，值为 None 时不做设置。
-  - **默认值**: `None`
-  - **示例**: 50
-
-- `-r`, `--render`
-  - **描述**: 给透明图增加背景色时的渲染方式，仅在 type 为`add_background`和`generate_layout_photos`时生效
-  - **默认值**: 0
-
-### 1.生成证件照(底透明)
-
-```bash
-python requests_api.py  \
-    -u http://127.0.0.1:8080 \
-    -t idphoto \
-    -i ./photo.jpg \
-    -o ./idphoto.png \
-    --height 413 \
-    --width 295 \
-    --face_detect_model mtcnn \
-    --human_matting_model hivision_modnet
+# 检查响应
+if response.ok:
+    # 输出响应内容
+    print(response.json())
+else:
+    # 输出错误信息
+    print(f"Request failed with status code {response.status_code}: {response.text}")
 ```
 
-### 2.添加背景色
+### 7. 证件照裁切
 
-```bash
-python requests_api.py  \
-    -u http://127.0.0.1:8080  \
-    -t add_background  \
-    -i ./idphoto.png  \
-    -o ./idphoto_with_background.jpg  \
-    -c 638cce  \
-    -k 50 \
-    -r 0
+```python
+import requests
+
+# 设置请求的 URL
+url = "http://127.0.0.1:8080/idphoto_crop"
+
+# 设置请求参数
+params = {
+    "head_measure_ratio": 0.2,
+    "head_height_ratio": 0.45,
+    "top_distance_max": 0.12,
+    "top_distance_min": 0.1,
+}
+
+# 设置文件和其他表单数据
+input_image_path = "idphoto_matting.png"
+files = {"input_image": ("idphoto_matting.png", open(input_image_path, "rb"), "image/png")}
+data = {
+    "height": 413,
+    "width": 295,
+    "face_detect_model": "mtcnn",
+    "hd": "true"
+}
+
+# 发送 POST 请求
+response = requests.post(url, params=params, files=files, data=data)
+
+# 检查响应
+if response.ok:
+    # 输出响应内容
+    print(response.json())
+else:
+    # 输出错误信息
+    print(f"Request failed with status code {response.status_code}: {response.text}")
 ```
-
-### 3.生成六寸排版照
-
-```bash
-python requests_api.py  \
-    -u http://127.0.0.1:8080  \
-    -t generate_layout_photos  \
-    -i ./idphoto_with_background.jpg  \
-    -o ./layout_photo.jpg  \
-    --height 413  \
-    --width 295 \
-    -k 200
-```
-
-
-### 4.人像抠图
-
-```bash
-python requests_api.py  \
-    -u http://127.0.0.1:8080  \
-    -t human_matting  \
-    -i ./photo.jpg  \
-    -o ./photo_matting.png
-    --human_matting_model hivision_modnet
-```
-
-### 请求失败的情况
-
-- 照片中检测到的人脸大于 1，则失败
 
 <br>
 
@@ -321,11 +342,11 @@ python requests_api.py  \
 
 ```java
 /**
-    * 生成证件照(底透明)  /idphoto 接口
-    * @param inputImageDir 文件地址
-    * @return
-    * @throws IOException
-    */
+* 生成证件照(底透明)  /idphoto 接口
+* @param inputImageDir 文件地址
+* @return
+* @throws IOException
+*/
 public static String requestIdPhoto(String inputImageDir) throws IOException {
     String url = BASE_URL+"/idphoto";
     // 创建文件对象
@@ -343,11 +364,11 @@ public static String requestIdPhoto(String inputImageDir) throws IOException {
 
 ```java
 /**
-    * 添加背景色  /add_background 接口
-    * @param inputImageDir 文件地址
-    * @return
-    * @throws IOException
-    */
+* 添加背景色  /add_background 接口
+* @param inputImageDir 文件地址
+* @return
+* @throws IOException
+*/
 public static String requestAddBackground(String inputImageDir) throws IOException {
     String url = BASE_URL+"/add_background";
     // 创建文件对象
@@ -365,11 +386,11 @@ public static String requestAddBackground(String inputImageDir) throws IOExcepti
 
 ```java
 /**
-    * 生成六寸排版照  /generate_layout_photos 接口
-    * @param inputImageDir 文件地址
-    * @return
-    * @throws IOException
-    */
+* 生成六寸排版照  /generate_layout_photos 接口
+* @param inputImageDir 文件地址
+* @return
+* @throws IOException
+*/
 public static String requestGenerateLayoutPhotos(String inputImageDir) throws IOException {
     String url = BASE_URL+"/generate_layout_photos";
     // 创建文件对象
@@ -388,11 +409,11 @@ public static String requestGenerateLayoutPhotos(String inputImageDir) throws IO
 
 ```java
 /**
-    * 生成人像抠图照  /human_matting 接口
-    * @param inputImageDir 文件地址
-    * @return
-    * @throws IOException
-    */
+* 生成人像抠图照  /human_matting 接口
+* @param inputImageDir 文件地址
+* @return
+* @throws IOException
+*/
 public static String requestHumanMattingPhotos(String inputImageDir) throws IOException {
     String url = BASE_URL+"/human_matting";
     // 创建文件对象
@@ -400,6 +421,37 @@ public static String requestHumanMattingPhotos(String inputImageDir) throws IOEx
     Map<String, Object> paramMap=new HashMap<>();
     paramMap.put("input_image",inputFile);
     //包含status、image_base64
+    return HttpUtil.post(url, paramMap);
+}
+```
+
+### 5.图像加水印
+
+```java
+/**
+ * 添加水印到图片 /watermark 接口
+ * @param inputImageDir 文件地址
+ * @param text 水印文本
+ * @param size 水印文字大小
+ * @param opacity 水印透明度
+ * @param angle 水印旋转角度
+ * @param color 水印颜色
+ * @param space 水印间距
+ * @return
+ * @throws IOException
+ */
+public static String requestAddWatermark(String inputImageDir, String text, int size, double opacity, int angle, String color, int space) throws IOException {
+    String url = BASE_URL + "/watermark?size=" + size + "&opacity=" + opacity + "&angle=" + angle + "&color=" + color + "&space=" + space;
+    
+    // 创建文件对象
+    File inputFile = new File(inputImageDir);
+    
+    // 创建参数映射
+    Map<String, Object> paramMap = new HashMap<>();
+    paramMap.put("input_image", inputFile);
+    paramMap.put("text", text);
+    
+    // 发送POST请求并返回响应
     return HttpUtil.post(url, paramMap);
 }
 ```
@@ -508,7 +560,46 @@ async function uploadImage(inputImagePath) {
 }
 
 // 示例调用
-uploadImage("demo/images/test.jpg").then(response => {
+uploadImage("demo/images/test0.jpg").then(response => {
     console.log(response);
 });
+```
+
+### 5.图像加水印
+
+```javascript
+async function sendMultipartRequest() {
+    const url = "http://127.0.0.1:8080/watermark?size=20&opacity=0.5&angle=30&color=%23000000&space=25";
+
+    const formData = new FormData();
+    formData.append("text", "Hello");
+
+    // Assuming you have a file input element with id 'fileInput'
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput.files.length > 0) {
+        formData.append("input_image", fileInput.files[0]);
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json'
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            const jsonResponse = await response.json();
+            console.log(jsonResponse);
+        } else {
+            console.error('Request failed:', response.status, response.statusText);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Call the function to send request
+sendMultipartRequest();
 ```
