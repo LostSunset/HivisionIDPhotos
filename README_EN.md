@@ -54,14 +54,14 @@ English / [中文](README.md) / [日本語](README_JP.md) / [한국어](README_K
 
 - Online Experience: [![SwanHub Demo](https://img.shields.io/static/v1?label=Demo&message=SwanHub%20Demo&color=blue)](https://swanhub.co/ZeYiLin/HivisionIDPhotos/demo)、[![Spaces](https://img.shields.io/badge/🤗-Open%20in%20Spaces-blue)](https://huggingface.co/spaces/TheEeeeLin/HivisionIDPhotos)、[![][modelscope-shield]][modelscope-link]
 
+- 2024.09.24: API interface adds base64 image input option | Gradio Demo adds **Layout Photo Cropping Lines** feature
+- 2024.09.22: Gradio Demo adds **Beast Mode** and **DPI** parameter
 - 2024.09.18: Gradio Demo adds **Share Template Photos** feature and **American Style** background option
 - 2024.09.17: Gradio Demo adds **Custom Background Color-HEX Input** feature | **(Community Contribution) C++ Version** - [HivisionIDPhotos-cpp](https://github.com/zjkhahah/HivisionIDPhotos-cpp) contributed by [zjkhahah](https://github.com/zjkhahah)
 - 2024.09.16: Gradio Demo adds **Face Rotation Alignment** feature, custom size input supports **millimeters**
 - 2024.09.14: Gradio Demo adds **Custom DPI** feature, adds Japanese and Korean support, adds **Adjust Brightness, Contrast, Sharpness** feature
 - 2024.09.12: Gradio Demo adds **Whitening** feature | API interface adds **Watermark**, **Set Photo KB Size**, **ID Photo Cropping**
 - 2024.09.11: Added **transparent image display and download** feature to Gradio Demo.
-- 2024.09.10: Added a new **face detection model** Retinaface-resnet50, which offers higher detection accuracy at a slightly slower speed compared to mtcnn. Recommended for use.
-- 2024.09.09: Added a new **Background Removal Model** [BiRefNet-v1-lite](https://github.com/ZhengPeng7/BiRefNet) | Gradio added **Advanced Parameter Settings** and **Watermark** tabs
 
 <br>
 
@@ -102,6 +102,10 @@ We have shared some interesting applications and extensions of HivisionIDPhotos 
 - [HivisionIDPhotos-wechat-weapp](https://github.com/no1xuan/HivisionIDPhotos-wechat-weapp): WeChat ID photo mini program, powered by the HivisionIDphotos algorithm, contributed by [no1xuan](https://github.com/no1xuan)
 
 [<img src="assets/community-wechat-miniprogram.png" width="900" alt="HivisionIDPhotos-wechat-weapp">](https://github.com/no1xuan/HivisionIDPhotos-wechat-weapp)
+
+- [HivisionIDPhotos-Uniapp](https://github.com/soulerror/HivisionIDPhotos-Uniapp): Front-end of WeChat ID photo mini program based on uniapp, powered by the HivisionIDphotos algorithm, contributed by [soulerror](https://github.com/soulerror)
+
+[<img src="assets/community-uniapp-wechat-miniprogram.png" width="900" alt="HivisionIDPhotos-uniapp">](https://github.com/soulerror/HivisionIDPhotos-Uniapp)
 
 - [HivisionIDPhotos-cpp](https://github.com/zjkhahah/HivisionIDPhotos-cpp): C++ version of HivisionIDphotos, built by [zjkhahah](https://github.com/zjkhahah)
 - [HivisionIDPhotos-windows-GUI](https://github.com/zhaoyun0071/HivisionIDPhotos-windows-GUI): Windows client application built by [zhaoyun0071](https://github.com/zhaoyun0071)
@@ -155,7 +159,17 @@ Store in the project's `hivision/creator/weights` directory:
 | RetinaFace | **Offline** face detection model, moderate CPU inference speed (in seconds), and high accuracy | [Download](https://github.com/Zeyi-Lin/HivisionIDPhotos/releases/download/pretrained-model/retinaface-resnet50.onnx) and place it in the `hivision/creator/retinaface/weights` directory |
 | Face++ | Online face detection API launched by Megvii, higher detection accuracy, [official documentation](https://console.faceplusplus.com.cn/documents/4888373) | [Usage Documentation](docs/face++_EN.md)|
 
-## 5. GPU Inference Acceleration (Optional)
+## 5. Performance Reference
+
+> Test environment: Mac M1 Max 64GB, non-GPU acceleration, test image resolution: 512x715(1) and 764×1146(2).
+
+| Model Combination | Memory Occupation | Inference Time (1) | Inference Time (2) |
+| -- | -- | -- | -- |
+| MODNet + mtcnn | 410MB | 0.207s | 0.246s |
+| MODNet + retinaface | 405MB | 0.571s | 0.971s |
+| birefnet-v1-lite + retinaface | 6.20GB | 7.063s | 7.128s |
+
+## 6. GPU Inference Acceleration (Optional)
 
 In the current version, the model that can be accelerated by NVIDIA GPUs is `birefnet-v1-lite`, and please ensure you have around 16GB of VRAM.
 
@@ -252,8 +266,6 @@ python deploy_api.py
 For detailed request methods, please refer to the [API Documentation](docs/api_EN.md), which includes the following request examples:
 - [cURL](docs/api_EN.md#curl-request-examples)
 - [Python](docs/api_EN.md#python-request-example)
-- [Java](docs/api_EN.md#java-request-example)
-- [Javascript](docs/api_EN.md#javascript-request-examples)
 
 <br>
 
@@ -315,12 +327,14 @@ This project provides some additional configuration options, which can be set us
 |--|--|--|--|
 | FACE_PLUS_API_KEY | Optional | This is your API key obtained from the Face++ console | `7-fZStDJ····` |
 | FACE_PLUS_API_SECRET | Optional | Secret corresponding to the Face++ API key | `VTee824E····` |
+| RUN_MODE | Optional | Running mode, with the option of `beast` (beast mode). In beast mode, the face detection and matting models will not release memory, achieving faster secondary inference speeds. It is recommended to try to have at least 16GB of memory. | `beast` |
 
 Example of using environment variables in Docker:
 ```bash
 docker run  -d -p 7860:7860 \
     -e FACE_PLUS_API_KEY=7-fZStDJ···· \
     -e FACE_PLUS_API_SECRET=VTee824E···· \
+    -e RUN_MODE=beast \
     linzeyi/hivision_idphotos 
 ```
 
@@ -373,6 +387,10 @@ docker run  -d -p 7860:7860 \
 3. Add the name of the latest template to the `TEMPLATE_NAME_LIST` variable in the `_generate_image_template` function of `demo/processor.py`.
 
 <img src="assets/social_template.png" width="500">
+
+## 4. How to Modify the Top Navigation Bar of the Gradio Demo?
+
+- Modify the `demo/assets/title.md` file.
 
 <br>
 

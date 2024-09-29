@@ -8,7 +8,7 @@ import base64
 from hivision.plugin.watermark import Watermarker, WatermarkerStyles
 
 
-def save_image_dpi_to_bytes(image, output_image_path, dpi=300):
+def save_image_dpi_to_bytes(image: np.ndarray, output_image_path: str = None, dpi: int = 300):
     """
     设置图像的DPI（每英寸点数）并返回字节流
 
@@ -25,13 +25,14 @@ def save_image_dpi_to_bytes(image, output_image_path, dpi=300):
     image_bytes = byte_stream.getvalue()
 
     # Save the image to the output path
-    with open(output_image_path, "wb") as f:
-        f.write(image_bytes)
+    if output_image_path:
+        with open(output_image_path, "wb") as f:
+            f.write(image_bytes)
 
     return image_bytes
 
 
-def resize_image_to_kb(input_image, output_image_path, target_size_kb, dpi=300):
+def resize_image_to_kb(input_image: np.ndarray, output_image_path: str = None, target_size_kb: int = 100, dpi: int = 300):
     """
     Resize an image to a target size in KB.
     将图像调整大小至目标文件大小（KB）。
@@ -79,9 +80,11 @@ def resize_image_to_kb(input_image, output_image_path, target_size_kb, dpi=300):
                 img_byte_arr.write(padding)
 
             # Save the image to the output path
-            with open(output_image_path, "wb") as f:
-                f.write(img_byte_arr.getvalue())
-            break
+            if output_image_path:
+                with open(output_image_path, "wb") as f:
+                    f.write(img_byte_arr.getvalue())
+            
+            return img_byte_arr.getvalue()
 
         # Reduce the quality if the image is still too large
         quality -= 5
@@ -172,10 +175,25 @@ def numpy_2_base64(img: np.ndarray) -> str:
 
 
 def base64_2_numpy(base64_image: str) -> np.ndarray:
-    img = base64.b64decode(base64_image)
-    img = np.frombuffer(img, np.uint8)
-
+    # Remove the data URL prefix if present
+    if base64_image.startswith('data:image'):
+        base64_image = base64_image.split(',')[1]
+    
+    # Decode base64 string to bytes
+    img_bytes = base64.b64decode(base64_image)
+    
+    # Convert bytes to numpy array
+    img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+    
+    # Decode the image array
+    img = cv2.imdecode(img_array, cv2.IMREAD_UNCHANGED)
+    
     return img
+
+# 字节流转base64
+def bytes_2_base64(img_byte_arr: bytes) -> str:
+    base64_image = base64.b64encode(img_byte_arr).decode("utf-8")
+    return "data:image/png;base64," + base64_image
 
 
 def save_numpy_image(numpy_img, file_path):

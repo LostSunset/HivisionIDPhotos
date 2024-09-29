@@ -11,6 +11,9 @@ from demo.processor import IDPhotoProcessor
 
 
 def load_description(fp):
+    """
+    加载title.md文件作为Demo的顶部栏
+    """
     with open(fp, "r", encoding="utf-8") as f:
         content = f.read()
     return content
@@ -81,12 +84,7 @@ def create_ui(
                             value=LOCALES["size_mode"][DEFAULT_LANG]["choices"][0],
                             min_width=520,
                         )
-                        # 人脸对齐
-                        face_alignment_options = gr.CheckboxGroup(
-                            label=LOCALES["face_alignment"][DEFAULT_LANG]["label"],
-                            choices=LOCALES["face_alignment"][DEFAULT_LANG]["choices"],
-                            interactive=True,
-                        )
+                        
                     # 尺寸列表
                     with gr.Row(visible=True) as size_list_row:
                         size_list_options = gr.Dropdown(
@@ -143,6 +141,15 @@ def create_ui(
                         label=LOCALES["render_mode"][DEFAULT_LANG]["label"],
                         value=LOCALES["render_mode"][DEFAULT_LANG]["choices"][0],
                     )
+                    
+                    with gr.Row():
+                        # 插件模式
+                        plugin_options = gr.CheckboxGroup(
+                            label=LOCALES["plugin"][DEFAULT_LANG]["label"],
+                            choices=LOCALES["plugin"][DEFAULT_LANG]["choices"],
+                            interactive=True,
+                            value=LOCALES["plugin"][DEFAULT_LANG]["value"]
+                        )
 
                 # TAB2 - 高级参数 ------------------------------------------------
                 with gr.Tab(
@@ -335,7 +342,9 @@ def create_ui(
                     )
 
                 img_but = gr.Button(
-                    LOCALES["button"][DEFAULT_LANG]["label"], elem_id="btn"
+                    LOCALES["button"][DEFAULT_LANG]["label"],
+                    elem_id="btn",
+                    variant="primary"
                 )
 
                 example_images = gr.Examples(
@@ -525,10 +534,6 @@ def create_ui(
                     saturation_option: gr.update(
                         label=LOCALES["saturation_strength"][language]["label"]
                     ),
-                    face_alignment_options: gr.update(
-                        label=LOCALES["face_alignment"][language]["label"],
-                        choices=LOCALES["face_alignment"][language]["choices"],
-                    ),
                     custom_size_width_px: gr.update(
                         label=LOCALES["custom_size_px"][language]["width"]
                     ),
@@ -546,6 +551,11 @@ def create_ui(
                     ),
                     template_image_accordion: gr.update(
                         label=LOCALES["template_photo"][language]["label"]
+                    ),
+                    plugin_options: gr.update(
+                        label=LOCALES["plugin"][language]["label"],
+                        choices=LOCALES["plugin"][language]["choices"],
+                        value=LOCALES["plugin"][language]["choices"][0],
                     ),
                 }
 
@@ -571,7 +581,7 @@ def create_ui(
                         custom_size_px: gr.update(visible=False),
                         custom_size_mm: gr.update(visible=True),
                         size_list_row: gr.update(visible=False),
-                        face_alignment_options: gr.update(visible=True),
+                        plugin_options: gr.update(interactive=True),
                     }
                 # 如果选择自定义尺寸px
                 elif size_option_item == choices[2]:
@@ -579,7 +589,7 @@ def create_ui(
                         custom_size_px: gr.update(visible=True),
                         custom_size_mm: gr.update(visible=False),
                         size_list_row: gr.update(visible=False),
-                        face_alignment_options: gr.update(visible=True),
+                        plugin_options: gr.update(interactive=True),
                     }
                 # 如果选择只换底，则隐藏所有尺寸组件
                 elif size_option_item == choices[1]:
@@ -587,7 +597,7 @@ def create_ui(
                         custom_size_px: gr.update(visible=False),
                         custom_size_mm: gr.update(visible=False),
                         size_list_row: gr.update(visible=False),
-                        face_alignment_options: gr.update(visible=False),
+                        plugin_options: gr.update(interactive=False),
                     }
                 # 如果选择预设尺寸，则隐藏自定义尺寸组件
                 else:
@@ -595,7 +605,7 @@ def create_ui(
                         custom_size_px: gr.update(visible=False),
                         custom_size_mm: gr.update(visible=False),
                         size_list_row: gr.update(visible=True),
-                        face_alignment_options: gr.update(visible=True),
+                        plugin_options: gr.update(interactive=True),
                     }
 
             def change_image_kb(image_kb_option, lang):
@@ -650,7 +660,7 @@ def create_ui(
                     contrast_option,
                     sharpen_option,
                     saturation_option,
-                    face_alignment_options,
+                    plugin_options,
                     custom_size_width_px,
                     custom_size_height_px,
                     custom_size_width_mm,
@@ -669,7 +679,7 @@ def create_ui(
                     custom_size_px,
                     custom_size_mm,
                     size_list_row,
-                    face_alignment_options,
+                    plugin_options,
                 ],
             )
 
@@ -731,7 +741,7 @@ def create_ui(
                     contrast_option,
                     sharpen_option,
                     saturation_option,
-                    face_alignment_options,
+                    plugin_options,
                 ],
                 outputs=[
                     img_output_standard,

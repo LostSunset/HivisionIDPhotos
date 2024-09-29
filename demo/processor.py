@@ -9,7 +9,7 @@ from hivision.utils import (
     save_image_dpi_to_bytes,
 )
 from hivision.creator.layout_calculator import (
-    generate_layout_photo,
+    generate_layout_array,
     generate_layout_image,
 )
 from hivision.creator.choose_handler import choose_handler
@@ -61,16 +61,38 @@ class IDPhotoProcessor:
         contrast_strength=0,
         sharpen_strength=0,
         saturation_strength=0,
-        face_alignment_option=False,
-    ):
+        plugin_option=[],
+    ):        
         # 初始化参数
         top_distance_min = top_distance_max - 0.02
         # 得到render_option在LOCALES["render_mode"][language]["choices"]中的索引
         render_option_index = LOCALES["render_mode"][language]["choices"].index(
             render_option
         )
+        # 读取插件选项
+        # 人脸对齐选项
+        if LOCALES["plugin"][language]["choices"][0] in plugin_option:
+            face_alignment_option = True
+        else:
+            face_alignment_option = False
+        # 排版裁剪线选项
+        if LOCALES["plugin"][language]["choices"][1] in plugin_option:
+            layout_photo_crop_line_option = True
+        else:
+            layout_photo_crop_line_option = False
+        # JPEG格式选项
+        if LOCALES["plugin"][language]["choices"][2] in plugin_option:
+            jpeg_format_option = True
+        else:
+            jpeg_format_option = False
+        # 五寸相纸选项
+        if LOCALES["plugin"][language]["choices"][3] in plugin_option:
+            five_inch_option = True
+        else:
+            five_inch_option = False
+        
         idphoto_json = self._initialize_idphoto_json(
-            mode_option, color_option, render_option_index, image_kb_options
+            mode_option, color_option, render_option_index, image_kb_options, layout_photo_crop_line_option, jpeg_format_option, five_inch_option
         )
 
         # 处理尺寸模式
@@ -153,6 +175,9 @@ class IDPhotoProcessor:
         color_option,
         render_option,
         image_kb_options,
+        layout_photo_crop_line_option,
+        jpeg_format_option,
+        five_inch_option,
     ):
         """初始化idphoto_json字典"""
         return {
@@ -162,6 +187,9 @@ class IDPhotoProcessor:
             "image_kb_mode": image_kb_options,
             "custom_image_kb": None,
             "custom_image_dpi": None,
+            "layout_photo_crop_line_option": layout_photo_crop_line_option,
+            "jpeg_format_option": jpeg_format_option,
+            "five_inch_option": five_inch_option,
         }
 
     # 处理尺寸模式
@@ -350,45 +378,27 @@ class IDPhotoProcessor:
         )
 
         # 调整图片大小
-        output_image_path_dict = self._resize_image_if_needed(
+        output_image_path_dict = self._save_image(
             result_image_standard,
             result_image_hd,
             result_image_layout,
             idphoto_json,
+            format="jpeg" if idphoto_json["jpeg_format_option"] else "png",
         )
-
-        # 如果output_image_path_dict为None，即没有设置KB和DPI
-        if output_image_path_dict is None:
-            return self._create_response(
-                result_image_standard,
-                result_image_hd,
-                result_image_standard_png,
-                result_image_hd_png,
-                gr.update(value=result_image_layout, visible=result_image_layout_visible),
-                gr.update(value=result_image_template, visible=result_image_template_visible),
-                gr.update(visible = result_image_template_visible),
-            )
-        # 如果output_image_path_dict不为None，即设置了KB和DPI
-        else:
-            if output_image_path_dict["layout"]["processed"]:
-                result_image_layout = output_image_path_dict["layout"]["path"]
-            return self._create_response(
-                (
-                    output_image_path_dict["standard"]["path"]
-                    if output_image_path_dict["standard"]["processed"]
-                    else result_image_standard
-                ),
-                (
-                    output_image_path_dict["hd"]["path"]
-                    if output_image_path_dict["hd"]["processed"]
-                    else result_image_hd    
-                ),
-                result_image_standard_png,
-                result_image_hd_png,
-                gr.update(value=result_image_layout, visible=result_image_layout_visible),
-                gr.update(value=result_image_template, visible=result_image_template_visible),
-                gr.update(visible = result_image_template_visible),
-            )
+        
+        # 返回
+        if result_image_layout is not None:
+            result_image_layout = output_image_path_dict["layout"]["path"]
+            
+        return self._create_response(
+            output_image_path_dict["standard"]["path"],
+            output_image_path_dict["hd"]["path"],
+            result_image_standard_png,
+            result_image_hd_png,
+            gr.update(value=result_image_layout, visible=result_image_layout_visible),
+            gr.update(value=result_image_template, visible=result_image_template_visible),
+            gr.update(visible = result_image_template_visible),
+        )
 
     # 渲染背景
     def _render_background(self, result_image_standard, result_image_hd, idphoto_json, language):
@@ -435,9 +445,11 @@ class IDPhotoProcessor:
         if idphoto_json["size_mode"] in LOCALES["size_mode"][language]["choices"][1]:
             return None, False
 
-        typography_arr, typography_rotate = generate_layout_photo(
+        typography_arr, typography_rotate = generate_layout_array(
             input_height=idphoto_json["size"][0],
             input_width=idphoto_json["size"][1],
+            LAYOUT_HEIGHT= 1205 if not idphoto_json["five_inch_option"] else 1051,
+            LAYOUT_WIDTH= 1795 if not idphoto_json["five_inch_option"] else 1500,
         )
         
         result_image_layout = generate_layout_image(
@@ -446,6 +458,9 @@ class IDPhotoProcessor:
             typography_rotate,
             height=idphoto_json["size"][0],
             width=idphoto_json["size"][1],
+            crop_line=idphoto_json["layout_photo_crop_line_option"],
+            LAYOUT_HEIGHT=1205 if not idphoto_json["five_inch_option"] else 1051,
+            LAYOUT_WIDTH=1795 if not idphoto_json["five_inch_option"] else 1500,
         )
 
         return result_image_layout, True
@@ -499,7 +514,7 @@ class IDPhotoProcessor:
         result_image_hd = add_watermark(image=result_image_hd, **watermark_params)
         return result_image_standard, result_image_hd
 
-    def _resize_image_if_needed(
+    def _save_image(
         self,
         result_image_standard,
         result_image_hd,
@@ -507,11 +522,9 @@ class IDPhotoProcessor:
         idphoto_json,
         format="png",
     ):
-        """如果需要，调整图片大小"""
-        # 设置输出路径
-        base_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "demo/kb_output"
-        )
+        # 设置输出路径（临时目录）
+        import tempfile
+        base_path = tempfile.mkdtemp()
         timestamp = int(time.time())
         output_paths = {
             "standard": {
@@ -543,53 +556,78 @@ class IDPhotoProcessor:
                 custom_kb,
                 dpi=custom_dpi,
             )
-            output_paths["standard"]["processed"] = True
             # 保存高清图像和排版图像
             save_image_dpi_to_bytes(
                 result_image_hd, output_paths["hd"]["path"], dpi=custom_dpi
             )
-            output_paths["hd"]["processed"] = True
             if result_image_layout is not None:
                 save_image_dpi_to_bytes(
                     result_image_layout, output_paths["layout"]["path"], dpi=custom_dpi
                 )
-                output_paths["layout"]["processed"] = True
 
             return output_paths
 
         # 只有自定义DPI的情况
         elif custom_dpi:
             for key in output_paths:
-                output_paths[key]["path"] += f"_{custom_dpi}dpi.{format}"
                 # 保存所有图像，使用自定义DPI
+                # 如果只换底，则不保存排版图像
                 if key == "layout" and result_image_layout is None:
-                    pass
-                else:
-                    save_image_dpi_to_bytes(
-                        locals()[f"result_image_{key}"],
-                        output_paths[key]["path"],
-                        dpi=custom_dpi,
-                    )
-                    output_paths[key]["processed"] = True
+                    continue
+                output_paths[key]["path"] += f"_{custom_dpi}dpi.{format}"
+                save_image_dpi_to_bytes(
+                    locals()[f"result_image_{key}"],
+                    output_paths[key]["path"],
+                    dpi=custom_dpi,
+                )
 
             return output_paths
 
         # 只有自定义KB的情况
         elif custom_kb:
             output_paths["standard"]["path"] += f"_{custom_kb}kb.{format}"
-            # 只调整标准图像大小并保存
+            output_paths["hd"]["path"] += f".{format}"
+            if not (key == "layout" and result_image_layout is None):
+                output_paths[key]["path"] += f".{format}"
+            
+            # 只调整标准图像大小
             resize_image_to_kb(
                 result_image_standard,
                 output_paths["standard"]["path"],
                 custom_kb,
                 dpi=300,
             )
-            output_paths["standard"]["processed"] = True
+            
+            # 保存高清图像和排版图像
+            save_image_dpi_to_bytes(
+                result_image_hd, output_paths["hd"]["path"], dpi=300
+            )
+            if result_image_layout is not None:
+                save_image_dpi_to_bytes(
+                    result_image_layout, output_paths["layout"]["path"], dpi=300
+                )
 
             return output_paths
-
-        # 如果没有自定义设置，返回None
-        return None
+        # 没有自定义设置
+        else: 
+            output_paths["standard"]["path"] += f".{format}"
+            output_paths["hd"]["path"] += f".{format}"
+            output_paths["layout"]["path"] += f".{format}"
+            
+            # 保存所有图像
+            save_image_dpi_to_bytes(
+                result_image_standard, output_paths["standard"]["path"], dpi=300
+            )
+            save_image_dpi_to_bytes(
+                result_image_hd, output_paths["hd"]["path"], dpi=300
+            )
+            if result_image_layout is not None:
+                save_image_dpi_to_bytes(
+                    result_image_layout, output_paths["layout"]["path"], dpi=300
+                )
+                
+            return output_paths
+            
 
     def _create_response(
         self,
@@ -600,7 +638,7 @@ class IDPhotoProcessor:
         result_layout_image_gr,
         result_image_template_gr,
         result_image_template_accordion_gr,
-    ):
+    ):    
         """创建响应"""
         response = [
             result_image_standard,
