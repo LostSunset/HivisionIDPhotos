@@ -27,7 +27,7 @@
 
 > **相关项目**：
 >
-> - [SwanLab](https://github.com/SwanHubX/SwanLab)：训练人像抠图模型全程用它来分析和监控，以及和实验室同学协作交流，大幅提升了训练效率。
+> - [SwanLab](https://github.com/SwanHubX/SwanLab)：一个开源、现代化设计的深度学习训练跟踪与可视化工具，同时支持云端/离线使用，国内好用的Wandb平替；适配30+主流框架（PyTorch、HuggingFace Transformers、LLaMA Factory、Lightning等），欢迎使用！
 
 
 <br>
@@ -377,6 +377,10 @@ docker run  -d -p 7860:7860 \
 ## 4. 如何修改Gradio Demo的顶部导航栏？
 
 - 修改`demo/assets/title.md`
+
+## 5. 如何添加/修改「打印排版」中的尺寸？
+
+- 修改`demo/locales.py`中的`print_switch`字典，添加/修改新的尺寸名称和尺寸参数，然后重新运行`python app.py`
 
 <br>
 
